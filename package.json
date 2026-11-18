@@ -1,0 +1,24 @@
+{
+  "name": "dsh-autonomy",
+  "version": "0.4.0",
+  "description": "汐的生活：驱动力、目标、行动目录、tick 调度、审计、暂停、反思记账（离线阶段，仍 dry_run + mock）",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "license": "MIT"
+}
