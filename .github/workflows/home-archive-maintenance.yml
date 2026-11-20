@@ -7,6 +7,8 @@ on:
       - 'lib/run/home-archive-maintenance.js'
       - 'lib/store/db.js'
       - 'lib/config.js'
+      - 'lib/index.js'
+      - 'package.json'
       - 'tests/home-archive-maintenance.test.mjs'
       - 'tests/config-schema.test.mjs'
       - '.github/workflows/home-archive-maintenance.yml'
