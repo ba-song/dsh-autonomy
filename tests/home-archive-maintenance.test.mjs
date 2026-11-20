@@ -58,6 +58,7 @@ test('manual acceptance runs export then exclusive tar backup, records size/hash
     const result = await service.runOnce()
     assert.equal(result.ok, true)
     assert.equal(fake.exports(), 2)
+    assert.equal(result.attemptsUsed, 2)
     assert.equal(result.exportExitCode, 0)
     assert.equal(result.tarExitCode, 0)
     assert.equal(result.backupBytes, 'fake-tar-content'.length)
