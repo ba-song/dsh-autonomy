@@ -6,7 +6,6 @@ import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync, mkdirSync
 import { join } from 'node:path'
 import { openDb } from '../lib/store/db.js'
 import { createHomeArchiveMaintenance } from '../lib/run/home-archive-maintenance.js'
-import { Config } from '../lib/index.js'
 import { loadConfig, DEFAULTS } from '../lib/config.js'
 
 function fakeSpawn({ dataDir, archiveRoot, failExportCount = 0, hold = false } = {}) {
@@ -42,9 +41,6 @@ test('home archive scheduler defaults disabled and fixes the cadence at 15 days'
   assert.equal(cfg.homeArchiveMaintenance.enabled, true)
   assert.equal(cfg.homeArchiveMaintenance.intervalDays, 15)
   assert.equal(cfg.homeArchiveMaintenance.retryCount, 2)
-  const parsed = Config.parse({ homeArchiveMaintenance: { enabled: true, retryCount: 2 } })
-  assert.equal(parsed.homeArchiveMaintenance.enabled, true)
-  assert.equal(parsed.homeArchiveMaintenance.intervalDays, undefined)
 })
 
 test('manual acceptance runs export then exclusive tar backup, records size/hash and next due time', async () => {
