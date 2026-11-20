@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
 import { PassThrough } from 'node:stream'
-import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { openDb } from '../lib/store/db.js'
 import { createHomeArchiveMaintenance } from '../lib/run/home-archive-maintenance.js'
@@ -33,9 +33,7 @@ function fakeSpawn({ dataDir, archiveRoot, failExportCount = 0, hold = false } =
   }
   return { spawnImpl, calls, exports: () => exports }
 }
-function requireMkdir(path) { const fs = awaitlessFs(); fs.mkdirSync(path, { recursive: true }) }
-function awaitlessFs() { return requireFs }
-import * as requireFs from 'node:fs'
+function requireMkdir(path) { mkdirSync(path, { recursive: true }) }
 
 test('home archive scheduler defaults disabled and fixes the cadence at 15 days', () => {
   assert.equal(DEFAULTS.homeArchiveMaintenance.enabled, false)
@@ -99,9 +97,8 @@ test('second instance cannot overlap while the first holds the cross-process loc
   let finish
   const heldSpawn = (command,args) => {
     const child = new EventEmitter(); child.stdout=new PassThrough(); child.stderr=new PassThrough()
-    if(command===process.execPath){ const out=args[args.indexOf('--out')+1]; requireMkdir(out); writeFileSync(join(out,'x.md'),'x') }
-    if(command==='tar') writeFileSync(args[1],'tar')
-    finish=()=>child.emit('close',0,null)
+    if(command===process.execPath){ const out=args[args.indexOf('--out')+1]; requireMkdir(out); writeFileSync(join(out,'x.md'),'x'); finish=()=>child.emit('close',0,null) }
+    if(command==='tar'){ writeFileSync(args[1],'tar'); setImmediate(()=>child.emit('close',0,null)) }
     return child
   }
   const cfg={enabled:true,exportScript:'/tmp/e.mjs',memoryDbPath:'/tmp/m.db',archiveRoot,backupDir,retryCount:0}
