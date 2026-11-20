@@ -34,6 +34,11 @@ function fakeSpawn({ dataDir, archiveRoot, failExportCount = 0, hold = false } =
   return { spawnImpl, calls, exports: () => exports }
 }
 function requireMkdir(path) { mkdirSync(path, { recursive: true }) }
+function makeExportScript(dir) {
+  const file = join(dir, 'export-home-archive.mjs')
+  writeFileSync(file, '// isolated test fixture; child execution is mocked')
+  return file
+}
 
 test('home archive scheduler defaults disabled and fixes the cadence at 15 days', () => {
   assert.equal(DEFAULTS.homeArchiveMaintenance.enabled, false)
@@ -43,15 +48,36 @@ test('home archive scheduler defaults disabled and fixes the cadence at 15 days'
   assert.equal(cfg.homeArchiveMaintenance.retryCount, 2)
 })
 
+
+test('missing exporter path fails explicitly before spawning or creating backup output', async () => {
+  const dir = mkdtempSync(join(process.cwd(), 'tmp-home-archive-missing-exporter-'))
+  const { db } = openDb({ dbPath: join(dir, 'autonomy.db') })
+  const archiveRoot = join(dir, '永久'), backupDir = join(dir, '备份')
+  const fake = fakeSpawn({ archiveRoot })
+  const missing = join(dir, 'plugin-src', 'scripts', 'export-home-archive.mjs')
+  const service = createHomeArchiveMaintenance({
+    cfg: { enabled: true, exportScript: missing, memoryDbPath: join(dir, 'memory.db'), archiveRoot, backupDir, retryCount: 1 },
+    db, dataDir: dir, spawnImpl: fake.spawnImpl,
+  })
+  try {
+    const result = await service.runOnce()
+    assert.equal(result.ok, false)
+    assert.equal(result.code, `E_EXPORT_SCRIPT_NOT_FOUND: ${missing}`)
+    assert.equal(fake.calls.length, 0, 'missing exporter must be detected before child process spawn')
+    assert.equal(existsSync(backupDir), false, 'missing exporter must not create backup output')
+  } finally { db.close(); rmSync(dir, { recursive: true, force: true }) }
+})
+
 test('manual acceptance runs export then exclusive tar backup, records size/hash and next due time', async () => {
   const dir = mkdtempSync(join(process.cwd(), 'tmp-home-archive-scheduler-'))
   const { db } = openDb({ dbPath: join(dir, 'autonomy.db') })
   const archiveRoot = join(dir, '永久')
   const backupDir = join(dir, '备份')
+  const exportScript = makeExportScript(dir)
   const fake = fakeSpawn({ archiveRoot, failExportCount: 1 })
   let now = Date.UTC(2026,10,20,5)
   const service = createHomeArchiveMaintenance({
-    cfg: { enabled: true, exportScript: '/tmp/export-home.mjs', memoryDbPath: '/tmp/memory.db', archiveRoot, backupDir, homeCwd: '/sdcard/DSHA/生活/数据/home', retryCount: 1, retryDelayMs: 1 },
+    cfg: { enabled: true, exportScript, memoryDbPath: '/tmp/memory.db', archiveRoot, backupDir, homeCwd: '/sdcard/DSHA/生活/数据/home', retryCount: 1, retryDelayMs: 1 },
     db, dataDir: dir, spawnImpl: fake.spawnImpl, clock: () => now, sleepImpl: async () => {},
   })
   try {
@@ -77,9 +103,10 @@ test('schedule waits for manual first acceptance, then runs only after 15 days',
   const dir = mkdtempSync(join(process.cwd(), 'tmp-home-archive-schedule-due-'))
   const { db } = openDb({ dbPath: join(dir, 'autonomy.db') })
   const archiveRoot = join(dir, '永久'), backupDir = join(dir, '备份')
+  const exportScript = makeExportScript(dir)
   const fake = fakeSpawn({ archiveRoot })
   let now = Date.UTC(2026,10,20,5)
-  const service = createHomeArchiveMaintenance({ cfg:{enabled:true,exportScript:'/tmp/export.mjs',memoryDbPath:'/tmp/m.db',archiveRoot,backupDir,retryCount:0}, db, dataDir:dir, spawnImpl:fake.spawnImpl, clock:()=>now })
+  const service = createHomeArchiveMaintenance({ cfg:{enabled:true,exportScript,memoryDbPath:'/tmp/m.db',archiveRoot,backupDir,retryCount:0}, db, dataDir:dir, spawnImpl:fake.spawnImpl, clock:()=>now })
   try {
     assert.equal((await service.tick()).reason,'awaiting-first-manual-acceptance')
     assert.equal((await service.runOnce()).ok,true)
@@ -102,7 +129,8 @@ test('second instance cannot overlap while the first holds the cross-process loc
     if(command==='tar'){ writeFileSync(args[1],'tar'); setImmediate(()=>child.emit('close',0,null)) }
     return child
   }
-  const cfg={enabled:true,exportScript:'/tmp/e.mjs',memoryDbPath:'/tmp/m.db',archiveRoot,backupDir,retryCount:0}
+  const exportScript = makeExportScript(dir)
+  const cfg={enabled:true,exportScript,memoryDbPath:'/tmp/m.db',archiveRoot,backupDir,retryCount:0}
   const first=createHomeArchiveMaintenance({cfg,db,dataDir:dir,spawnImpl:heldSpawn})
   const second=createHomeArchiveMaintenance({cfg,db,dataDir:dir,spawnImpl:fakeSpawn({archiveRoot}).spawnImpl})
   const pending=first.runOnce()

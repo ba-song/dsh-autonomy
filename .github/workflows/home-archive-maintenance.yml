@@ -8,6 +8,7 @@ on:
       - 'lib/store/db.js'
       - 'lib/config.js'
       - 'tests/home-archive-maintenance.test.mjs'
+      - 'tests/config-schema.test.mjs'
       - '.github/workflows/home-archive-maintenance.yml'
   pull_request:
     paths:
@@ -25,4 +26,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - run: npm test
       - run: node --test tests/home-archive-maintenance.test.mjs

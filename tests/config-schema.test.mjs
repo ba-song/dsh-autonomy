@@ -46,8 +46,11 @@ test('Config：解析后 loadConfig 与解析前完全一致（运行时行为�
   assert.deepEqual(loadConfig(resolved), loadConfig(structuredClone(DEFAULTS)))
 })
 
-test('Config：volatile 只标在设置卡片的 4 个字段上', () => {
+test('Config：volatile 字段集合与设置卡片一致，永久档案调度配置不暴露为设置项', () => {
   assert.deepEqual(volatilePaths(Config), ['drives.extended', 'enabled', 'home.enabled', 'home.maxIntervalMin', 'home.minIntervalMin', 'pauseAll', 'purpose.enabled', 'triggers.device.enabled', 'triggers.notification.enabled'])
+  assert.deepEqual(volatilePaths(Config.dict.homeArchiveMaintenance), [])
+  const resolved = Config['~standard'].validate(structuredClone(DEFAULTS)).value
+  assert.deepEqual(loadConfig(resolved).homeArchiveMaintenance, loadConfig(structuredClone(DEFAULTS)).homeArchiveMaintenance)
 })
 
 test('Config：minIntervalMin/maxIntervalMin 范围 15..1440', () => {
@@ -102,7 +105,7 @@ test('loadConfig：入口解开 volatile 引用（含裸 {get}）', () => {
   assert.equal(typeof unwrapVolatile(resolved.enabled), 'boolean')
 })
 
-test('设置服务：describe 只暴露 4 个 volatile 字段，mutate 写入嵌套路径', async (t) => {
+test('设置服务：describe 只暴露已声明的设置卡片字段，不暴露永久档案调度配置', async (t) => {
   let SettingsForms
   try {
     ({ SettingsForms } = await import('@deepseek-ai/dsh-settings'))
