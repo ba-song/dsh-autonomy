@@ -1,0 +1,28 @@
+name: Home archive maintenance tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/run/home-archive-maintenance.js'
+      - 'lib/store/db.js'
+      - 'lib/config.js'
+      - 'tests/home-archive-maintenance.test.mjs'
+      - '.github/workflows/home-archive-maintenance.yml'
+  pull_request:
+    paths:
+      - 'lib/run/home-archive-maintenance.js'
+      - 'lib/store/db.js'
+      - 'lib/config.js'
+      - 'tests/home-archive-maintenance.test.mjs'
+      - '.github/workflows/home-archive-maintenance.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node --test tests/home-archive-maintenance.test.mjs
